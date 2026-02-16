@@ -14,9 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sponge - Automated llms.txt Generator",
+  title: "Profound - llms.txt Generator",
   description:
     "Generate spec-compliant llms.txt files for any website. Help LLMs understand your site.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

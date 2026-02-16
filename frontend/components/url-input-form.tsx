@@ -54,12 +54,7 @@ export function UrlInputForm() {
           disabled={isLoading}
           autoFocus
         />
-        <Button
-          type="submit"
-          size="lg"
-          disabled={isLoading || !url.trim()}
-          className="glow-primary h-12 px-8"
-        >
+        <Button type="submit" size="lg" disabled={isLoading || !url.trim()} className="h-12 px-8">
           {isLoading ? "Generating..." : "Generate"}
         </Button>
       </div>

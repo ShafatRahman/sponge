@@ -17,7 +17,7 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
         disabled={disabled}
         className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
           mode === "default"
-            ? "bg-primary/15 text-primary ring-primary/30 ring-1"
+            ? "bg-foreground/10 text-foreground ring-foreground/20 ring-1"
             : "text-muted-foreground hover:text-foreground"
         } disabled:opacity-50`}
       >
@@ -29,7 +29,7 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
         disabled={disabled}
         className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
           mode === "detailed"
-            ? "bg-primary/15 text-primary ring-primary/30 ring-1"
+            ? "bg-foreground/10 text-foreground ring-foreground/20 ring-1"
             : "text-muted-foreground hover:text-foreground"
         } disabled:opacity-50`}
       >

@@ -55,8 +55,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.12 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.2 260);
-  --primary-foreground: oklch(1 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0.07 0 0);
   --secondary: oklch(0.18 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.18 0 0);
@@ -66,20 +66,20 @@
   --destructive: oklch(0.65 0.22 25);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.65 0.2 260);
-  --chart-1: oklch(0.65 0.2 260);
-  --chart-2: oklch(0.65 0.18 290);
-  --chart-3: oklch(0.7 0.15 180);
-  --chart-4: oklch(0.75 0.18 80);
+  --ring: oklch(1 0 0 / 40%);
+  --chart-1: oklch(0.85 0 0);
+  --chart-2: oklch(0.7 0 0);
+  --chart-3: oklch(0.55 0 0);
+  --chart-4: oklch(0.4 0 0);
   --chart-5: oklch(0.65 0.22 25);
   --sidebar: oklch(0.1 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.2 260);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0.07 0 0);
   --sidebar-accent: oklch(0.18 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.65 0.2 260);
+  --sidebar-ring: oklch(1 0 0 / 40%);
 }
 
 @layer base {
@@ -91,31 +91,13 @@
   }
 }
 
-/* Gradient text utility */
-.gradient-text {
-  background: linear-gradient(135deg, #376cff 0%, #8b5cf6 50%, #376cff 100%);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-shift 4s ease infinite;
-}
-
-@keyframes gradient-shift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-/* Subtle glow effect for primary buttons */
-.glow-primary {
-  box-shadow:
-    0 0 20px oklch(0.65 0.2 260 / 30%),
-    0 0 60px oklch(0.65 0.2 260 / 10%);
+/* Accent text utility */
+.accent-text {
+  color: oklch(0.985 0 0);
+  text-decoration: underline;
+  text-decoration-color: oklch(1 0 0 / 30%);
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
 }
 
 /* Code block styling */
