@@ -50,6 +50,7 @@ locals {
     { name = "DJANGO_SETTINGS_MODULE", value = "config.settings.production" },
     { name = "CORS_ALLOWED_ORIGINS", value = var.cors_allowed_origins },
     { name = "ALLOWED_HOSTS", value = var.allowed_hosts },
+    { name = "LANGFUSE_HOST", value = var.langfuse_host },
   ]
 
   # Sensitive values fetched from SSM Parameter Store at task startup
@@ -102,8 +103,8 @@ resource "aws_ecs_task_definition" "api" {
       command     = ["CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1"]
       interval    = 10
       timeout     = 5
-      retries     = 2
-      startPeriod = 30
+      retries     = 3
+      startPeriod = 60
     }
   }])
 }
@@ -114,6 +115,10 @@ resource "aws_ecs_service" "api" {
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.api_min_tasks
   launch_type     = "FARGATE"
+
+  # Allow the app time to boot before ECS enforces ALB health checks.
+  # Uvicorn workers take ~25s to start; 60s gives ample headroom.
+  health_check_grace_period_seconds = 60
 
   network_configuration {
     subnets         = var.private_subnet_ids

@@ -37,6 +37,12 @@ variable "ssm_parameter_arns" {
   type        = map(string)
 }
 
+variable "langfuse_host" {
+  description = "Langfuse API host URL"
+  type        = string
+  default     = "https://us.cloud.langfuse.com"
+}
+
 variable "container_image_worker" {
   description = "Docker image for worker containers (includes Playwright)"
   type        = string
