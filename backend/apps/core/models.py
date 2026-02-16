@@ -47,7 +47,10 @@ class BrowserConfig(BaseModel):
     block_fonts: bool = True
     viewport_width: int = 1280
     viewport_height: int = 720
-    user_agent: str = "SpongeBot/1.0 (+https://sponge.dev/bot)"
+    user_agent: str = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    )
 
 
 class AIConfig(BaseModel):

@@ -43,16 +43,8 @@ CMD ["uv", "run", "gunicorn", "config.asgi:application", \
 # -----------------------------------------------
 FROM base AS worker
 
-# Install Playwright system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdbus-1-3 \
-    libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
-    libpango-1.0-0 libcairo2 libasound2 libxshmfence1 libx11-xcb1 \
-    libxcb-dri3-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Playwright browsers
-RUN uv run playwright install chromium
+# Install Playwright browsers and all required system dependencies
+RUN uv run playwright install --with-deps chromium
 
 # Default: run as worker (override command in docker-compose/ECS)
 CMD ["uv", "run", "celery", "-A", "config", "worker", \

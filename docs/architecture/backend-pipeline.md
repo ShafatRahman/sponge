@@ -9,32 +9,39 @@ The generation pipeline runs inside Celery tasks. Both Default and Detailed mode
 Shared between Default and Detailed modes.
 
 1. **Robots.txt parsing** (`RobotsParser`): Fetch `/robots.txt`, extract sitemap URLs and disallowed paths.
-2. **Sitemap parsing** (`SitemapParser`): Recursively fetch and parse sitemaps. Results are cached in Redis for 1 hour.
-3. **BFS fallback** (`LinkCrawler`): If no sitemap entries found, crawl the homepage and follow links up to `max_depth` (default 2).
+2. **Sitemap parsing** (`SitemapParser`): Recursively fetch and parse sitemaps (max depth 3, max 500 entries). Results are cached in Redis for 1 hour.
+3. **BFS fallback** (`LinkCrawler`): If no sitemap entries found, crawl the homepage and follow links up to `max_depth` (default 2). Uses HTTP-first with Playwright fallback for bot-blocked (403) or CSR pages. Domain matching is www-agnostic (`tesla.com` == `www.tesla.com`).
 4. Pages are capped at `max_urls` (default 50, max 100).
 
 ### 2. Extraction
 
-**Default and Detailed modes** (shared pipeline: `PageFetcher` + `MetaExtractor`):
+**`SmartPageFetcher`** (shared pipeline for both modes):
 - Concurrent HTTP fetches via `httpx` (10 concurrent connections)
 - BeautifulSoup4 parses HTML for `<title>`, `<meta name="description">`, Open Graph tags
 - Detects JS-rendered pages via heuristics (empty body + noscript, React/Vue root divs)
-- Playwright fallback: If a page is detected as client-side rendered, Playwright renders it with headless Chromium
+- Pages returning 403/429 (bot-blocked) are also flagged for Playwright re-fetch
+- Playwright fallback: CSR or bot-blocked pages are re-rendered with headless Chromium
+- Soft-404 detection filters out "access denied", "forbidden", and generic error pages
 
-### 3. Enhancement
+### 3. Categorization
 
-`DescriptionEnhancer` + `LLMClient`:
-- Pages with content are sent to GPT-4o-mini via Langfuse for AI-generated descriptions
-- Batch processing with configurable concurrency (default 10 concurrent LLM calls)
-- Cost is estimated and tracked in job metadata
-- Used in both Default and Detailed modes
+**`URLCategorizer`**: Groups pages into sections (Documentation, API Reference, Guides, Blog, etc.) using regex path patterns. Unmatched pages get a section name from their first URL path segment. Small sections are merged into "Pages". This happens **before** enhancement so the LLM can process pages in section-aware batches.
 
-### 4. Categorization + Assembly
+### 4. Enhancement
 
-1. **`URLCategorizer`**: Categorizes pages into sections (Documentation, API Reference, Guides, Blog, etc.) using regex path patterns. Unmatched pages get a section name from their first URL path segment.
-2. **`LlmsTxtBuilder`**: Assembles the final output:
-   - `build_index()`: Produces `llms.txt` (H1 + blockquote + H2 sections with markdown links)
-   - `build_full()`: Produces `llms-full.txt` (full page content inlined under each section)
+**`DescriptionEnhancer`** + **`LLMClient`** (both Default and Detailed modes):
+- Pages are sent to GPT-4o-mini in **batches by section** (one LLM call per section) for cross-page awareness and differentiated descriptions
+- `LLMClient.generate_site_summary()`: Generates blockquote + key notes from the homepage
+- `LLMClient.polish_llms_txt()`: Final consistency pass on the assembled output
+- All LLM calls are traced via Langfuse (latency, cost, token usage)
+- Graceful degradation: falls back to meta tag descriptions if LLM fails
+
+### 5. Assembly
+
+**`LlmsTxtBuilder`**: Assembles the final [llmstxt.org](https://llmstxt.org) spec-compliant output:
+- `build_index()`: Produces `llms.txt` (H1 + blockquote + notes + H2 sections with markdown links, max 5 entries per section)
+- `build_full()`: Produces `llms-full.txt` (full page content inlined under each section)
+- Detailed mode uploads `llms-full.txt` to Supabase Storage
 
 ## Task Classes
 
@@ -45,21 +52,15 @@ Both tasks inherit from `BaseGenerationTask`, which provides:
 - `on_failure()`: marks job as failed with error message
 
 ```
-generate (prefork pool, concurrency=4) -- both Default and Detailed modes
-  -> _discover_pages
-  -> PageFetcher.fetch_all (with Playwright fallback for CSR sites)
-  -> DescriptionEnhancer.enhance_batch (OpenAI)
-  -> URLCategorizer.categorize
-  -> LlmsTxtBuilder.build_index
-  -> save to Job model
-
 generate (prefork pool, concurrency=4)
-  -> _discover_pages
-  -> PageFetcher.fetch_all (with Playwright fallback for CSR sites)
-  -> DescriptionEnhancer.enhance_batch (OpenAI)
-  -> URLCategorizer.categorize
-  -> LlmsTxtBuilder.build_index + build_full
-  -> upload llms-full.txt to Supabase Storage
+  -> _discover_pages (robots.txt -> sitemap -> BFS fallback)
+  -> PageFetcher.fetch_all (HTTP-first, Playwright fallback for CSR/403)
+  -> URLCategorizer.categorize (section-aware grouping)
+  -> DescriptionEnhancer.enhance_sections (batch by section, OpenAI)
+  -> LLMClient.generate_site_summary (homepage -> blockquote + notes)
+  -> LlmsTxtBuilder.build_index (curated llms.txt)
+  -> [Detailed only] LlmsTxtBuilder.build_full + upload to Supabase Storage
+  -> LLMClient.polish_llms_txt (final consistency pass)
   -> save to Job model
 ```
 

@@ -24,7 +24,7 @@ All CI/CD is managed by GitHub Actions in `.github/workflows/`.
   2. Login to ECR
   3. Build Docker image (single build, tagged with SHA + latest)
   4. Push to ECR
-  5. Force-deploy all three ECS services
+  5. Force-deploy both ECS services (API + Worker)
   6. Wait for API stability
 - **Secrets**: `AWS_ROLE_ARN`
 
