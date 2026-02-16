@@ -43,10 +43,60 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      - name: Update ECS services
+      - name: Deploy API service
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_API_SERVICE --force-new-deployment
-          aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_WORKER_SERVICE --force-new-deployment
+          FULL_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          # Get current task definition and update the image
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition sponge-prod-api \
+            --query 'taskDefinition' --output json)
+
+          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq \
+            --arg IMAGE "$FULL_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                 .compatibilities, .registeredAt, .registeredBy)')
+
+          # Register new task definition
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          # Update service to use the new task definition
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_API_SERVICE \
+            --task-definition "$NEW_ARN"
+
+      - name: Deploy Worker service
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          FULL_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition sponge-prod-worker \
+            --query 'taskDefinition' --output json)
+
+          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq \
+            --arg IMAGE "$FULL_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                 .compatibilities, .registeredAt, .registeredBy)')
+
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_WORKER_SERVICE \
+            --task-definition "$NEW_ARN"
 
       - name: Wait for API service stability
         run: |

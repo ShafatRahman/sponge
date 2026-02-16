@@ -47,12 +47,14 @@ resource "aws_lb_target_group" "api" {
   vpc_id      = var.vpc_id
   target_type = "ip"
 
+  deregistration_delay = 30
+
   health_check {
     path                = "/api/health/"
     healthy_threshold   = 2
-    unhealthy_threshold = 3
+    unhealthy_threshold = 2
     timeout             = 5
-    interval            = 30
+    interval            = 10
     matcher             = "200"
   }
 }
