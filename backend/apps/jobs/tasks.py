@@ -350,17 +350,16 @@ async def _run_pipeline(
 
         builder = LlmsTxtBuilder()
 
-        # Default mode: curated (max 5 entries/section). Detailed: comprehensive.
-        max_per_section = 5 if config.mode == JobMode.DEFAULT else None
-        llms_txt, structured_sections = builder.build_index(
-            site_info, enhanced_sections, max_per_section=max_per_section
-        )
-
-        # Build llms-full.txt only for Detailed mode
-        llms_full_txt = None
         if config.mode == JobMode.DETAILED:
+            # Detailed mode: build llms-full.txt (full page content) as the main output
             sections_raw = categorizer.categorize(extracted_pages)
-            llms_full_txt = builder.build_full(site_info, sections_raw)
+            llms_txt = builder.build_full(site_info, sections_raw)
+            structured_sections = {name: [] for name in sections_raw}
+        else:
+            # Default mode: build curated index (max 5 entries/section)
+            llms_txt, structured_sections = builder.build_index(
+                site_info, enhanced_sections, max_per_section=5
+            )
 
         # Phase 6: Polish pass (both modes)
         task.publish_progress(
@@ -386,7 +385,7 @@ async def _run_pipeline(
 
         return LlmsTxtResult(
             llms_txt=llms_txt,
-            llms_full_txt=llms_full_txt,
+            llms_full_txt=None,
             site_info=site_info,
             sections=structured_sections,
             total_pages=len(pages),

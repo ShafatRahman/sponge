@@ -77,6 +77,13 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
+# TLS support for rediss:// URLs (Upstash, ElastiCache with encryption)
+if REDIS_URL.startswith("rediss://"):
+    import ssl
+
+    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+
 # --- OpenAI ---
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
