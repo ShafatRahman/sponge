@@ -1,0 +1,55 @@
+[project]
+name = "sponge-backend"
+version = "0.1.0"
+description = "Automated llms.txt generator backend"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.1,<5.2",
+    "djangorestframework>=3.15,<4.0",
+    "django-cors-headers>=4.6,<5.0",
+    "dj-database-url>=2.3,<3.0",
+    "psycopg2-binary>=2.9,<3.0",
+    "celery[redis]>=5.4,<6.0",
+    "redis>=5.2,<6.0",
+    "gevent>=24.11,<25.0",
+    "httpx>=0.28,<1.0",
+    "beautifulsoup4>=4.12,<5.0",
+    "lxml>=5.3,<6.0",
+    "playwright>=1.49,<2.0",
+    "openai>=1.59,<2.0",
+    "langfuse>=2.56,<3.0",
+    "pydantic>=2.10,<3.0",
+    "pyjwt>=2.10,<3.0",
+    "supabase>=2.11,<3.0",
+    "gunicorn>=23.0,<24.0",
+    "uvicorn[standard]>=0.34,<1.0",
+    "python-dotenv>=1.0,<2.0",
+    "html2text>=2024.2,<2025.0",
+    "sentry-sdk>=2.52.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9,<1.0",
+    "mypy>=1.14,<2.0",
+    "django-stubs>=5.1,<6.0",
+    "pytest>=8.3,<9.0",
+    "pytest-django>=4.9,<5.0",
+    "pytest-asyncio>=0.25,<1.0",
+    "fakeredis>=2.26,<3.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
