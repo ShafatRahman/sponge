@@ -369,9 +369,7 @@ async def _run_pipeline(
         )
 
         try:
-            llms_txt = await asyncio.to_thread(
-                llm_client.polish_llms_txt, llms_txt, job_id
-            )
+            llms_txt = await asyncio.to_thread(llm_client.polish_llms_txt, llms_txt, job_id)
         except Exception:
             logger.warning("LLM polish pass failed, using unpolished output", exc_info=True)
 

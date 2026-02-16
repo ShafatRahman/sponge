@@ -134,9 +134,7 @@ class URLCategorizer:
             (rule, [re.compile(p, re.IGNORECASE) for p in rule.path_patterns])
             for rule in sorted(self._rules, key=lambda r: r.priority, reverse=True)
         ]
-        self._exclude_compiled = [
-            re.compile(p, re.IGNORECASE) for p in self.EXCLUDE_PATTERNS
-        ]
+        self._exclude_compiled = [re.compile(p, re.IGNORECASE) for p in self.EXCLUDE_PATTERNS]
 
     def categorize(self, pages: list[ExtractedPage]) -> dict[str, list[ExtractedPage]]:
         """Categorize pages into named sections.

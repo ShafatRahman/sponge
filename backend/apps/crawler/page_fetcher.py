@@ -240,9 +240,7 @@ class SmartPageFetcher:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.warning("Render exception for %s: %s", pages[i].url, result)
-                extracted.append(
-                    ExtractedPage(url=pages[i].url, error=str(result), fetch_status=0)
-                )
+                extracted.append(ExtractedPage(url=pages[i].url, error=str(result), fetch_status=0))
             else:
                 extracted.append(result)
 

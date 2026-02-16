@@ -86,9 +86,7 @@ class DescriptionEnhancer:
 
             return section_name, enhanced
 
-        tasks = [
-            enhance_section(name, pages) for name, pages in sections.items() if pages
-        ]
+        tasks = [enhance_section(name, pages) for name, pages in sections.items() if pages]
         results = await asyncio.gather(*tasks)
         self._llm_client.flush()
 

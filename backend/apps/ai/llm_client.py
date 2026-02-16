@@ -35,17 +35,17 @@ FALLBACK_USER_PROMPT_TEMPLATE = (
     "URL: {url}\n\n"
     "Page content:\n{content}\n\n"
     "Good examples:\n"
-    "- {{\"title\": \"Python SDK Reference\", "
-    "\"description\": \"Complete API reference for the Python client library.\"}}\n"
-    "- {{\"title\": \"Pricing Plans\", "
-    "\"description\": \"Three tiers from free to enterprise with usage-based billing.\"}}\n"
-    "- {{\"title\": \"HTMX Integration Guide\", "
-    "\"description\": \"Step-by-step setup for adding HTMX to a FastHTML project.\"}}\n\n"
+    '- {{"title": "Python SDK Reference", '
+    '"description": "Complete API reference for the Python client library."}}\n'
+    '- {{"title": "Pricing Plans", '
+    '"description": "Three tiers from free to enterprise with usage-based billing."}}\n'
+    '- {{"title": "HTMX Integration Guide", '
+    '"description": "Step-by-step setup for adding HTMX to a FastHTML project."}}\n\n'
     "Bad examples (do NOT produce these):\n"
-    "- {{\"title\": \"Explore Our Platform\", "
-    "\"description\": \"Discover how our platform can help you.\"}}\n"
-    "- {{\"title\": \"Learn More\", "
-    "\"description\": \"Explore the latest insights from our team.\"}}\n\n"
+    '- {{"title": "Explore Our Platform", '
+    '"description": "Discover how our platform can help you."}}\n'
+    '- {{"title": "Learn More", '
+    '"description": "Explore the latest insights from our team."}}\n\n'
     'Respond with:\n{{"title": "...", "description": "..."}}'
 )
 
@@ -96,15 +96,15 @@ BATCH_SECTION_SYSTEM_PROMPT = (
     "highlight what makes each one unique.\n"
     "- Vary sentence structure across entries. Do not repeat phrasing patterns.\n"
     "- Be factual and specific. Mention product names, technologies, or topics.\n\n"
-    "Respond with a JSON object: {\"pages\": [{\"url\": \"...\", \"title\": \"...\", "
-    "\"description\": \"...\"}, ...]}"
+    'Respond with a JSON object: {"pages": [{"url": "...", "title": "...", '
+    '"description": "..."}, ...]}'
 )
 
 BATCH_SECTION_USER_TEMPLATE = (
-    "Generate titles and descriptions for all pages in the \"{section}\" section.\n\n"
+    'Generate titles and descriptions for all pages in the "{section}" section.\n\n'
     "{pages_block}\n\n"
     "Respond with:\n"
-    "{{\"pages\": [{{\"url\": \"...\", \"title\": \"...\", \"description\": \"...\"}}, ...]}}"
+    '{{"pages": [{{"url": "...", "title": "...", "description": "..."}}, ...]}}'
 )
 
 POLISH_SYSTEM_PROMPT = (
@@ -265,17 +265,21 @@ class LLMClient:
         for page in pages:
             if page.url in enhanced_by_url:
                 e = enhanced_by_url[page.url]
-                enhanced.append(EnhancedPage(
-                    url=page.url,
-                    title=e.get("title", page.title or "Untitled"),
-                    description=e.get("description", ""),
-                ))
+                enhanced.append(
+                    EnhancedPage(
+                        url=page.url,
+                        title=e.get("title", page.title or "Untitled"),
+                        description=e.get("description", ""),
+                    )
+                )
             else:
-                enhanced.append(EnhancedPage(
-                    url=page.url,
-                    title=page.title or page.og_title or "Untitled",
-                    description=page.description or page.og_description or "",
-                ))
+                enhanced.append(
+                    EnhancedPage(
+                        url=page.url,
+                        title=page.title or page.og_title or "Untitled",
+                        description=page.description or page.og_description or "",
+                    )
+                )
 
         return enhanced
 
