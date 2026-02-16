@@ -1,0 +1,17 @@
+---
+description: Terraform infrastructure conventions
+globs: infrastructure/**/*.tf
+alwaysApply: false
+---
+
+# Terraform Conventions
+
+- All infrastructure is in `infrastructure/` with modular structure under `modules/`.
+- Modules: vpc, ecr, ecs, alb, iam, ssm. Each has main.tf, variables.tf, outputs.tf.
+- Environment-specific values in `environments/{dev,prod}/terraform.tfvars`.
+- Sensitive variables are passed via GitHub Actions secrets to Terraform, which creates SSM SecureString parameters.
+- ECS containers pull secrets from SSM Parameter Store at startup via the `secrets` block (not plain-text env vars).
+- SSM parameter naming: `/{project_name}/{environment}/{KEY_NAME}` (e.g., `/sponge/prod/DATABASE_URL`).
+- ECS services: api (Gunicorn + UvicornWorker, ASGI), worker (prefork, Playwright available for CSR fallback).
+- Backend state stored in S3 bucket `sponge-terraform-state`.
+- When changing infrastructure, update `docs/deployment/` and `infrastructure/environments/*/terraform.tfvars.example`.

@@ -1,0 +1,37 @@
+---
+description: Documentation conventions and maintenance
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Documentation Standards
+
+## Structure
+
+- `docs/` contains all project documentation, organized by topic:
+  - `setup/` -- local development, env vars, Docker
+  - `architecture/` -- system design, pipeline, data flow, SSE
+  - `technologies/` -- tech stack reference with learning links
+  - `deployment/` -- ECS, Vercel, CI/CD, SSM secrets
+  - `testing/` -- test structure, running tests, writing new tests
+  - `api/` -- REST endpoints, auth, SSE protocol
+  - `contributing/` -- code style, git workflow, docs maintenance
+
+## When to Update Docs
+
+- New API endpoint -> `docs/api/endpoints.md`
+- Changed SSE behavior -> `docs/api/sse-protocol.md` + `docs/architecture/sse-streaming.md`
+- New dependency -> `docs/technologies/` (backend.md, frontend.md, or infrastructure.md)
+- Architecture change -> `docs/architecture/overview.md` + relevant sub-file
+- New Terraform module -> `docs/deployment/` + `docs/technologies/infrastructure.md`
+- Changed env vars -> `docs/setup/environment-variables.md`
+- New test patterns -> `docs/testing/README.md`
+- Changed Docker setup -> `docs/setup/docker.md`
+- Changed rate limits -> `docs/api/endpoints.md` + `docs/api/authentication.md` + `backend/apps/core/models.py` (`RateLimitConfig`)
+
+## Style
+
+- Use tables for structured data (env vars, commands, endpoints).
+- Include code examples where they clarify usage.
+- Link between docs when referencing related topics.
+- Keep each file focused on one topic. Split if a file exceeds ~200 lines.

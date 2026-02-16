@@ -1,0 +1,33 @@
+---
+description: Frontend TypeScript and React standards
+globs: frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend TypeScript Standards
+
+## Tooling
+
+- Run `npm run check` to verify typecheck + lint + format in one command.
+- Prettier handles formatting. ESLint handles logic errors. Don't fight between them.
+- Husky + lint-staged run automatically on commit.
+
+## Patterns
+
+- React components: functional only. No class components.
+- Services and API clients: class-based (ApiClient, JobsService, AuthService).
+- All API responses validated with Zod schemas in `lib/models/`.
+- Use `@/` path alias for imports (maps to project root).
+
+## API Integration
+
+- All API calls go through `ApiClient` singleton (`lib/api/api-client.ts`).
+- Request interceptor: attaches Supabase JWT, transforms body to snake_case.
+- Response interceptor: transforms response to camelCase, handles 401 refresh.
+- Domain services (JobsService) wrap ApiClient with typed methods.
+
+## Styling
+
+- Dark theme by default (Profound-inspired). Colors defined in `globals.css` CSS variables.
+- Use shadcn/ui components from `components/ui/`. Add new ones with `npx shadcn add <name>`.
+- Tailwind CSS v4. Use `cn()` utility from `lib/utils.ts` for conditional classes.

@@ -1,0 +1,38 @@
+---
+description: Python backend coding standards
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend Python Standards
+
+## Dependencies
+
+- Use `uv sync` to install, `uv run` to execute. Never use pip directly.
+- Add deps to `backend/pyproject.toml`, not a requirements.txt.
+
+## Linting
+
+- Run `uv run ruff check .` and `uv run ruff format .` before committing.
+- Line length: 100 chars. Quote style: double.
+
+## Patterns
+
+- Every module is a class. Use `__init__` for dependency injection.
+- Use `from __future__ import annotations` in every file.
+- Use `TYPE_CHECKING` blocks for imports only needed for type hints.
+- Django ORM models go in `apps/jobs/models.py`. Pipeline data models are Pydantic in `apps/core/models.py`.
+- DRF serializers validate API boundaries. Pydantic validates internal pipeline data.
+- Celery tasks inherit from `BaseGenerationTask` for shared Redis/Supabase access.
+
+## Example
+
+```python
+class MyService:
+    def __init__(self, http_client: HttpClient, config: CrawlConfig) -> None:
+        self._http_client = http_client
+        self._config = config
+
+    async def process(self, url: str) -> SomeResult:
+        ...
+```

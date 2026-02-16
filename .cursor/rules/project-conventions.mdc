@@ -1,0 +1,57 @@
+---
+description: Sponge project architecture and conventions
+alwaysApply: true
+---
+
+# Sponge Project Conventions
+
+## Architecture
+
+- Monorepo: `frontend/` (Next.js on Vercel), `backend/` (Django + Celery on ECS), `infrastructure/` (Terraform)
+- Backend uses `uv` for dependency management, not pip. Run commands with `uv run`.
+- Frontend uses npm. Quality checks: `npm run check` (typecheck + lint + format).
+- Database: PostgreSQL via `DATABASE_URL` env var (required). Supabase Cloud -- separate dev and prod projects.
+- ASGI server: Gunicorn with UvicornWorker for async SSE support.
+- Error tracking: Sentry on backend (sentry-sdk) and frontend (@sentry/nextjs). Custom DRF exception handler ensures clean error responses. Sonner toasts for frontend error notifications.
+- Secrets in production: AWS SSM Parameter Store (SecureString). Never plain-text env vars in ECS.
+
+## Code Style
+
+- Never use emojis in code, logs, or print statements.
+- All backend modules are class-based with dependency injection. No loose functions in files.
+- All internal data passing uses Pydantic models, never raw dicts.
+- Frontend React components are functional; services and API clients are class-based.
+- API boundary: Django sends snake_case, frontend uses camelCase. Axios interceptors handle transformation.
+
+## Data Flow
+
+- User submits URL -> Django creates Job -> dispatches Celery task -> worker runs pipeline -> publishes progress to Redis pub/sub -> SSE streams to frontend.
+- Default mode: httpx + BS4 + LLM (Playwright fallback for CSR sites). Detailed mode: same pipeline + llms-full.txt output.
+- LLM enhancement: categorize first, then batch-by-section (one LLM call per section), site summary from homepage, and a final polish pass on both modes.
+- Real-time updates: SSE (Server-Sent Events) via `GET /api/jobs/{id}/stream/`. No polling.
+- Progress is published to Redis pub/sub channel AND cached for reconnection support.
+- Rate limiting: Redis sorted-set sliding window. Defaults in `RateLimitConfig` (`backend/apps/core/models.py`): 10/day anonymous, 25/day authenticated. Reset with `docker-compose exec redis redis-cli KEYS "ratelimit:*" | xargs docker-compose exec -T redis redis-cli DEL`.
+
+## Testing
+
+- Backend tests: `uv run pytest` (96+ tests across core, generator, extractor, views).
+- Tests use `fakeredis` for Redis-dependent code, `unittest.mock.patch` for external services.
+- Shared fixtures in `backend/conftest.py`: `fake_redis`, `cache_service`, `job_factory`.
+
+## Key Files
+
+- Pydantic models: `backend/apps/core/models.py`
+- Celery tasks: `backend/apps/jobs/tasks.py`
+- API views: `backend/apps/jobs/views.py`
+- SSE streaming: `backend/apps/jobs/views.py` (`JobStreamView`)
+- Zod schemas: `frontend/lib/models/job.ts`
+- SSE hook: `frontend/lib/hooks/use-job-stream.ts`
+- API client: `frontend/lib/api/api-client.ts`
+- Terraform SSM: `infrastructure/modules/ssm/`
+
+## Documentation
+
+- Project docs: `docs/` (setup, architecture, technologies, deployment, testing, api, contributing)
+- **Before making changes**: Check relevant docs in `docs/` to understand the current design.
+- **After making changes**: Update relevant docs if you changed architecture, APIs, dependencies, or deployment.
+- See `docs/contributing/docs-maintenance.md` for the full guide on what to update when.
