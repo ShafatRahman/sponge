@@ -1,0 +1,102 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+    paths: [infrastructure/**]
+  pull_request:
+    branches: [main]
+    paths: [infrastructure/**]
+
+defaults:
+  run:
+    working-directory: infrastructure
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var-file=environments/prod/terraform.tfvars \
+            -var="supabase_url=${{ secrets.SUPABASE_URL }}" \
+            -var="supabase_secret_key=${{ secrets.SUPABASE_SECRET_KEY }}" \
+            -var="redis_url=${{ secrets.REDIS_URL }}" \
+            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+            -var="django_secret_key=${{ secrets.DJANGO_SECRET_KEY }}" \
+            -var="langfuse_public_key=${{ secrets.LANGFUSE_PUBLIC_KEY }}" \
+            -var="langfuse_secret_key=${{ secrets.LANGFUSE_SECRET_KEY }}" \
+            -var="database_url=${{ secrets.DATABASE_URL }}" \
+            -no-color
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Terraform Plan
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\`
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  apply:
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var-file=environments/prod/terraform.tfvars \
+            -var="supabase_url=${{ secrets.SUPABASE_URL }}" \
+            -var="supabase_secret_key=${{ secrets.SUPABASE_SECRET_KEY }}" \
+            -var="redis_url=${{ secrets.REDIS_URL }}" \
+            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
+            -var="django_secret_key=${{ secrets.DJANGO_SECRET_KEY }}" \
+            -var="langfuse_public_key=${{ secrets.LANGFUSE_PUBLIC_KEY }}" \
+            -var="langfuse_secret_key=${{ secrets.LANGFUSE_SECRET_KEY }}" \
+            -var="database_url=${{ secrets.DATABASE_URL }}"

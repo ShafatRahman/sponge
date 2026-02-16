@@ -1,0 +1,78 @@
+name: Docs Staleness Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infrastructure/**"
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for docs updates
+        id: docs-check
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          # Check if docs/ was modified in this PR
+          DOCS_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- docs/ .cursor/rules/ .claude/ | wc -l | tr -d ' ')
+
+          # Check which code areas changed
+          BACKEND_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- backend/ | wc -l | tr -d ' ')
+          FRONTEND_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- frontend/ | wc -l | tr -d ' ')
+          INFRA_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- infrastructure/ | wc -l | tr -d ' ')
+
+          echo "docs_changed=$DOCS_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "backend_changed=$BACKEND_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "frontend_changed=$FRONTEND_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "infra_changed=$INFRA_CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Post reminder comment
+        if: steps.docs-check.outputs.docs_changed == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const backend = parseInt('${{ steps.docs-check.outputs.backend_changed }}');
+            const frontend = parseInt('${{ steps.docs-check.outputs.frontend_changed }}');
+            const infra = parseInt('${{ steps.docs-check.outputs.infra_changed }}');
+
+            const areas = [];
+            if (backend > 0) areas.push(`backend (${backend} files)`);
+            if (frontend > 0) areas.push(`frontend (${frontend} files)`);
+            if (infra > 0) areas.push(`infrastructure (${infra} files)`);
+
+            const body = [
+              '**Docs check**: This PR modifies ' + areas.join(', ') + ' but does not include changes to `docs/`, `.cursor/rules/`, or `.claude/`.',
+              '',
+              'If this PR changes architecture, APIs, dependencies, or deployment, please consider updating the relevant docs. See `docs/contributing/docs-maintenance.md` for guidance.',
+              '',
+              '_This is an automated reminder, not a blocking check._'
+            ].join('\n');
+
+            // Check if we already posted a comment to avoid duplicates
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.data.find(c =>
+              c.user.type === 'Bot' && c.body.includes('**Docs check**')
+            );
+
+            if (!existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }

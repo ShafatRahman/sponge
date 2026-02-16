@@ -1,0 +1,21 @@
+environment = "dev"
+aws_region  = "us-east-1"
+
+api_min_tasks = 1
+api_max_tasks = 2
+
+worker_min_tasks = 1
+worker_max_tasks = 2
+
+# Sensitive variables -- pass via CLI or CI secrets.
+# These are stored in AWS SSM Parameter Store as SecureString parameters
+# and injected into ECS containers via the `secrets` block.
+#
+# supabase_url        = "..."
+# supabase_secret_key = "..."
+# redis_url            = "..."
+# database_url         = "..."
+# openai_api_key       = "..."
+# django_secret_key    = "..."
+# langfuse_public_key  = "..."
+# langfuse_secret_key  = "..."
