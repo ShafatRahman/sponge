@@ -49,7 +49,7 @@ locals {
   env_vars = [
     { name = "DJANGO_SETTINGS_MODULE", value = "config.settings.production" },
     { name = "CORS_ALLOWED_ORIGINS", value = var.cors_allowed_origins },
-    { name = "ALLOWED_HOSTS", value = var.cors_allowed_origins },
+    { name = "ALLOWED_HOSTS", value = var.allowed_hosts },
   ]
 
   # Sensitive values fetched from SSM Parameter Store at task startup
@@ -62,6 +62,7 @@ locals {
     { name = "DJANGO_SECRET_KEY", valueFrom = var.ssm_parameter_arns["DJANGO_SECRET_KEY"] },
     { name = "LANGFUSE_PUBLIC_KEY", valueFrom = var.ssm_parameter_arns["LANGFUSE_PUBLIC_KEY"] },
     { name = "LANGFUSE_SECRET_KEY", valueFrom = var.ssm_parameter_arns["LANGFUSE_SECRET_KEY"] },
+    { name = "SENTRY_DSN", valueFrom = var.ssm_parameter_arns["SENTRY_DSN"] },
   ]
 
   worker_image = var.container_image_worker != "" ? var.container_image_worker : var.container_image

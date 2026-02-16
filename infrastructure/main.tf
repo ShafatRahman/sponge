@@ -46,15 +46,28 @@ module "ssm" {
   project_name = var.project_name
   environment  = var.environment
 
-  secrets = {
+  secret_names = [
+    "SUPABASE_URL",
+    "SUPABASE_SECRET_KEY",
+    "REDIS_URL",
+    "DATABASE_URL",
+    "OPENAI_API_KEY",
+    "DJANGO_SECRET_KEY",
+    "LANGFUSE_PUBLIC_KEY",
+    "LANGFUSE_SECRET_KEY",
+    "SENTRY_DSN",
+  ]
+
+  secret_values = {
     SUPABASE_URL        = var.supabase_url
     SUPABASE_SECRET_KEY = var.supabase_secret_key
-    REDIS_URL            = var.redis_url
-    DATABASE_URL         = var.database_url
-    OPENAI_API_KEY       = var.openai_api_key
-    DJANGO_SECRET_KEY    = var.django_secret_key
-    LANGFUSE_PUBLIC_KEY  = var.langfuse_public_key
-    LANGFUSE_SECRET_KEY  = var.langfuse_secret_key
+    REDIS_URL           = var.redis_url
+    DATABASE_URL        = var.database_url
+    OPENAI_API_KEY      = var.openai_api_key
+    DJANGO_SECRET_KEY   = var.django_secret_key
+    LANGFUSE_PUBLIC_KEY = var.langfuse_public_key
+    LANGFUSE_SECRET_KEY = var.langfuse_secret_key
+    SENTRY_DSN          = var.sentry_dsn
   }
 }
 
@@ -104,6 +117,7 @@ module "ecs" {
 
   # Non-sensitive config
   cors_allowed_origins = var.cors_allowed_origins
+  allowed_hosts        = var.allowed_hosts
 
   # SSM ARNs for ECS secrets block (fetched from SSM at task startup)
   ssm_parameter_arns = module.ssm.parameter_arns

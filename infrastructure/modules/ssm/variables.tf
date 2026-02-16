@@ -8,7 +8,12 @@ variable "environment" {
   type        = string
 }
 
-variable "secrets" {
+variable "secret_names" {
+  description = "List of secret names to create as SSM parameters"
+  type        = list(string)
+}
+
+variable "secret_values" {
   description = "Map of secret name to value for SSM SecureString parameters"
   type        = map(string)
   sensitive   = true

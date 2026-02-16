@@ -82,6 +82,12 @@ variable "cors_allowed_origins" {
   default = "https://sponge.vercel.app"
 }
 
+variable "allowed_hosts" {
+  description = "Django ALLOWED_HOSTS (comma-separated hostnames, no scheme)"
+  type        = string
+  default     = "*"
+}
+
 # --- Secrets (passed to SSM module for SecureString parameter creation) ---
 
 variable "supabase_url" {
@@ -125,4 +131,11 @@ variable "database_url" {
   description = "PostgreSQL connection string (Supabase)"
   type        = string
   sensitive   = true
+}
+
+variable "sentry_dsn" {
+  description = "Sentry DSN for backend error tracking"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

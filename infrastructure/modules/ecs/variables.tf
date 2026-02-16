@@ -23,7 +23,12 @@ variable "worker_min_tasks" { type = number }
 variable "worker_max_tasks" { type = number }
 
 variable "cors_allowed_origins" {
-  description = "Non-sensitive CORS/ALLOWED_HOSTS value"
+  description = "Non-sensitive CORS origins value"
+  type        = string
+}
+
+variable "allowed_hosts" {
+  description = "Django ALLOWED_HOSTS (comma-separated hostnames, no scheme)"
   type        = string
 }
 

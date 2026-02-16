@@ -47,6 +47,7 @@ jobs:
             -var="langfuse_public_key=${{ secrets.LANGFUSE_PUBLIC_KEY }}" \
             -var="langfuse_secret_key=${{ secrets.LANGFUSE_SECRET_KEY }}" \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
+            -var="sentry_dsn=${{ secrets.SENTRY_DSN }}" \
             -no-color
 
       - name: Comment plan on PR
@@ -99,4 +100,5 @@ jobs:
             -var="django_secret_key=${{ secrets.DJANGO_SECRET_KEY }}" \
             -var="langfuse_public_key=${{ secrets.LANGFUSE_PUBLIC_KEY }}" \
             -var="langfuse_secret_key=${{ secrets.LANGFUSE_SECRET_KEY }}" \
-            -var="database_url=${{ secrets.DATABASE_URL }}"
+            -var="database_url=${{ secrets.DATABASE_URL }}" \
+            -var="sentry_dsn=${{ secrets.SENTRY_DSN }}"
