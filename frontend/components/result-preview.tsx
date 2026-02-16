@@ -35,11 +35,7 @@ export function ResultPreview({ result }: ResultPreviewProps) {
       {/* Stats */}
       <div className="flex flex-wrap gap-3">
         <Badge variant="secondary">{result.pagesProcessed} pages processed</Badge>
-        {result.pagesFailed > 0 && <Badge variant="destructive">{result.pagesFailed} failed</Badge>}
         <Badge variant="secondary">{result.generationTimeSeconds.toFixed(1)}s</Badge>
-        {result.llmCallsMade > 0 && (
-          <Badge variant="secondary">{result.llmCallsMade} LLM calls</Badge>
-        )}
       </div>
 
       {/* Content preview */}
@@ -47,10 +43,10 @@ export function ResultPreview({ result }: ResultPreviewProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-muted-foreground text-sm font-medium">llms.txt</CardTitle>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleCopy}>
+            <Button variant="secondary" size="sm" onClick={handleCopy}>
               {copied ? "Copied" : "Copy"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleDownload}>
+            <Button size="sm" onClick={handleDownload}>
               Download
             </Button>
           </div>
@@ -62,25 +58,6 @@ export function ResultPreview({ result }: ResultPreviewProps) {
           </pre>
         </CardContent>
       </Card>
-
-      {/* llms-full.txt download link */}
-      {result.llmsFullTxtUrl && (
-        <Card className="border-border/50">
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="font-medium">llms-full.txt</p>
-              <p className="text-muted-foreground text-sm">
-                Expanded version with full page content
-              </p>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href={result.llmsFullTxtUrl} target="_blank" rel="noopener noreferrer">
-                Download
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

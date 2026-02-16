@@ -36,21 +36,26 @@ export function GenerationProgress({ status, progress }: GenerationProgressProps
   const currentIndex = getPhaseIndex(status);
   const totalSteps = PHASE_ORDER.length - 1;
   const progressPercent = Math.min((currentIndex / totalSteps) * 100, 100);
+  const isWaiting = status === "pending" && !progress;
 
   return (
     <div className="space-y-6">
       {/* Progress bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">{PHASE_LABELS[status] ?? status}</span>
+          <span className={`text-sm font-medium ${isWaiting ? "animate-pulse" : ""}`}>
+            {PHASE_LABELS[status] ?? status}
+          </span>
           <Badge variant={status === "completed" ? "default" : "secondary"}>
             {Math.round(progressPercent)}%
           </Badge>
         </div>
         <div className="bg-secondary h-1.5 w-full overflow-hidden rounded-full">
           <div
-            className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progressPercent}%` }}
+            className={`h-full rounded-full transition-all duration-500 ease-out ${
+              isWaiting ? "bg-muted-foreground/40 animate-pulse" : "bg-primary"
+            }`}
+            style={{ width: isWaiting ? "5%" : `${progressPercent}%` }}
           />
         </div>
       </div>
@@ -88,8 +93,12 @@ export function GenerationProgress({ status, progress }: GenerationProgressProps
                 >
                   {PHASE_LABELS[phase]}
                 </p>
-                {isActive && progress?.message && (
-                  <p className="text-muted-foreground truncate text-xs">{progress.message}</p>
+                {isActive && (
+                  <p
+                    className={`text-muted-foreground truncate text-xs ${!progress?.message ? "animate-pulse" : ""}`}
+                  >
+                    {progress?.message ?? "Connecting to worker..."}
+                  </p>
                 )}
                 {isActive && progress?.completed != null && progress?.total != null && (
                   <p className="text-muted-foreground text-xs">
