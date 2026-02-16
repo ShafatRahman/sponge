@@ -11,7 +11,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
-from apps.core.models import CrawlConfig, DiscoveredPage
+from apps.core.models import BrowserConfig, CrawlConfig, DiscoveredPage
 
 if TYPE_CHECKING:
     from apps.core.http_client import HttpClient
@@ -31,11 +31,22 @@ SKIP_PATH_PATTERNS = re.compile(
 )
 
 
+def _strip_www(domain: str) -> str:
+    """Normalize domain by stripping 'www.' prefix for comparison."""
+    return domain.removeprefix("www.")
+
+
+def _same_site(netloc: str, base_domain: str) -> bool:
+    """Check if two domains belong to the same site (www-agnostic)."""
+    return _strip_www(netloc) == _strip_www(base_domain)
+
+
 class LinkCrawler:
     """BFS link crawler that discovers pages by following <a> tags.
 
     Used as a fallback when no sitemap is available.
     Respects max depth, max URLs, and disallowed paths from robots.txt.
+    Falls back to Playwright when HTTP fetches fail (e.g. bot-blocking sites).
     """
 
     def __init__(
@@ -43,10 +54,12 @@ class LinkCrawler:
         http_client: HttpClient,
         ssrf_guard: SSRFGuard,
         config: CrawlConfig,
+        browser_config: BrowserConfig | None = None,
     ) -> None:
         self._http_client = http_client
         self._ssrf_guard = ssrf_guard
         self._config = config
+        self._browser_config = browser_config
 
     async def crawl(
         self,
@@ -90,27 +103,97 @@ class LinkCrawler:
         return discovered
 
     async def _extract_links(self, url: str, base_domain: str) -> list[str]:
-        """Fetch a page and extract same-domain links."""
-        try:
-            text = await self._http_client.get_text(url)
-        except Exception:
-            logger.debug("Failed to fetch for link extraction: %s", url)
+        """Fetch a page and extract same-domain links.
+
+        Tries HTTP first. Falls back to Playwright if HTTP fails and a
+        browser config is available (handles bot-blocking and CSR sites).
+        """
+        html = await self._fetch_html(url)
+        if html is None:
             return []
 
-        soup = BeautifulSoup(text, "html.parser")
+        return self._parse_links(html, url, base_domain)
+
+    async def _fetch_html(self, url: str) -> str | None:
+        """Fetch page HTML via HTTP, falling back to Playwright on failure."""
+        try:
+            text = await self._http_client.get_text(url)
+            # If the page has very few links, it might be CSR -- check content
+            if self._looks_like_csr(text):
+                logger.info("Page looks like CSR, trying Playwright: %s", url)
+                rendered = await self._playwright_fetch(url)
+                return rendered if rendered else text
+            return text
+        except Exception:
+            logger.debug("HTTP failed for link extraction: %s", url)
+
+        # Playwright fallback for bot-blocked or CSR sites
+        rendered = await self._playwright_fetch(url)
+        if rendered:
+            return rendered
+
+        logger.debug("All fetch methods failed for %s", url)
+        return None
+
+    async def _playwright_fetch(self, url: str) -> str | None:
+        """Render a page with Playwright and return the HTML."""
+        if not self._browser_config:
+            return None
+
+        try:
+            from apps.extractor.playwright_provider import PlaywrightProvider
+
+            provider = PlaywrightProvider(self._browser_config)
+            try:
+                result = await provider.get_page_content(url)
+                if result.error:
+                    logger.debug("Playwright render failed for %s: %s", url, result.error)
+                    return None
+                logger.info("Playwright rendered %s for link extraction", url)
+                return result.html
+            finally:
+                await provider.close()
+        except Exception:
+            logger.debug("Playwright unavailable for %s", url, exc_info=True)
+            return None
+
+    def _parse_links(self, html: str, base_url: str, base_domain: str) -> list[str]:
+        """Parse <a> tags from HTML and return normalized same-domain URLs."""
+        soup = BeautifulSoup(html, "html.parser")
+        all_anchors = soup.find_all("a", href=True)
         links: list[str] = []
 
-        for tag in soup.find_all("a", href=True):
+        for tag in all_anchors:
             href = tag["href"]
-            absolute = urljoin(url, href)
+            absolute = urljoin(base_url, href)
             parsed = urlparse(absolute)
 
-            if parsed.netloc == base_domain and parsed.scheme in ("http", "https"):
+            if _same_site(parsed.netloc, base_domain) and parsed.scheme in (
+                "http",
+                "https",
+            ):
                 normalized = self._normalize_url(absolute)
                 if not SKIP_EXTENSIONS.search(parsed.path):
                     links.append(normalized)
 
+        logger.debug(
+            "Parsed %d same-site links from %d <a> tags on %s",
+            len(links),
+            len(all_anchors),
+            base_url,
+        )
         return links
+
+    @staticmethod
+    def _looks_like_csr(html: str) -> bool:
+        """Heuristic: page is likely CSR if the body has very little content."""
+        soup = BeautifulSoup(html, "html.parser")
+        body = soup.find("body")
+        if not body:
+            return False
+        links = body.find_all("a", href=True)
+        text_len = len(body.get_text(strip=True))
+        return len(links) < 3 and text_len < 500
 
     def _normalize_url(self, url: str) -> str:
         """Strip fragments and trailing slashes for deduplication."""
@@ -125,7 +208,7 @@ class LinkCrawler:
         """Check if a URL should be skipped."""
         parsed = urlparse(url)
 
-        if parsed.netloc != base_domain:
+        if not _same_site(parsed.netloc, base_domain):
             return True
 
         if SKIP_EXTENSIONS.search(parsed.path):
