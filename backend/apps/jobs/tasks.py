@@ -248,7 +248,9 @@ async def _discover_pages(
     if sitemap_result.entries:
         pages = [DiscoveredPage(url=e.url, source="sitemap") for e in sitemap_result.entries]
     else:
-        link_crawler = LinkCrawler(http_client, ssrf_guard, config.crawl)
+        link_crawler = LinkCrawler(
+            http_client, ssrf_guard, config.crawl, browser_config=config.browser
+        )
         pages = await link_crawler.crawl(url, robots_result.disallowed_paths)
 
     pages = pages[: config.crawl.max_urls]
@@ -352,7 +354,7 @@ async def _run_pipeline(
 
         if config.mode == JobMode.DETAILED:
             # Detailed mode: build llms-full.txt (full page content) as the main output
-            sections_raw = categorizer.categorize(extracted_pages)
+            sections_raw = categorizer.categorize(pages_with_content)
             llms_txt = builder.build_full(site_info, sections_raw)
             structured_sections = {name: [] for name in sections_raw}
         else:

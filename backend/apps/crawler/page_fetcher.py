@@ -32,13 +32,38 @@ _SOFT_404_SIGNALS = [
     "page does not exist",
     "nothing here",
     "this page isn't available",
+    "this page could not be found",
+    "we couldn't find",
+    "no longer available",
+    "has been removed",
+    "has been moved",
+    "does not exist",
+    "access denied",
+    "forbidden",
+    "403 forbidden",
+    "you don't have permission",
+    "blocked",
+    "just a moment",
+    "error 404",
+    "error 403",
+    "error 500",
+    "internal server error",
+    "service unavailable",
 ]
 
 
 def _is_soft_404(page: ExtractedPage) -> bool:
-    """Detect pages that returned 200 but are actually error/not-found pages."""
-    title = (page.title or "").lower().strip()
-    return any(signal in title for signal in _SOFT_404_SIGNALS)
+    """Detect pages that returned 200 but are actually error/not-found pages.
+
+    Checks title, description, and a prefix of the body content for known
+    error-page phrases.
+    """
+    fields_to_check = [
+        (page.title or "").lower().strip(),
+        (page.description or "").lower().strip(),
+        (page.content_text or "")[:500].lower(),
+    ]
+    return any(signal in field for field in fields_to_check for signal in _SOFT_404_SIGNALS)
 
 
 class SmartPageFetcher:
@@ -105,10 +130,16 @@ class SmartPageFetcher:
         tasks = [fetch_one(page) for page in pages]
         results = list(await asyncio.gather(*tasks))
 
-        # Step 3: Identify CSR pages that need browser rendering
+        # Step 3: Identify pages that need browser rendering
+        # - CSR pages (detected via meta heuristics)
+        # - Pages blocked by the server (403/429 likely means bot detection)
+        retry_statuses = {403, 429}
         csr_indices: list[int] = []
         for i, result in enumerate(results):
-            if result.is_js_rendered and not result.error:
+            needs_browser = (result.is_js_rendered and not result.error) or (
+                result.fetch_status in retry_statuses
+            )
+            if needs_browser:
                 csr_indices.append(i)
 
         if not csr_indices:
@@ -218,6 +249,14 @@ class SmartPageFetcher:
                     content_text = self._content_extractor.extract(rendered.html)
                     if content_text:
                         extracted.content_text = content_text
+
+                    # Check for soft-404 on rendered content too
+                    if _is_soft_404(extracted):
+                        return ExtractedPage(
+                            url=page.url,
+                            fetch_status=rendered.status,
+                            error="Soft 404: rendered page content indicates an error page",
+                        )
 
                     return extracted
 
