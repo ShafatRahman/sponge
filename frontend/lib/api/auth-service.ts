@@ -38,15 +38,6 @@ export class AuthService {
     };
   }
 
-  async signInWithOAuth(provider: "google" | "github"): Promise<void> {
-    await this.supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  }
-
   async signOut(): Promise<void> {
     await this.supabase.auth.signOut();
   }

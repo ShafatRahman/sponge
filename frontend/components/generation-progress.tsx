@@ -12,7 +12,7 @@ const PHASE_LABELS: Record<string, string> = {
   pending: "Queued",
   discovering: "Discovering pages",
   extracting: "Extracting content",
-  enhancing: "Enhancing with AI",
+  enhancing: "Enhancing content",
   generating: "Building llms.txt",
   completed: "Complete",
   failed: "Failed",

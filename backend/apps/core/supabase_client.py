@@ -44,7 +44,3 @@ class SupabaseService:
         """Get a public URL for a storage object."""
         result = self.client.storage.from_(STORAGE_BUCKET).get_public_url(path)
         return result
-
-    def download_file(self, path: str) -> bytes:
-        """Download a file from Supabase Storage."""
-        return self.client.storage.from_(STORAGE_BUCKET).download(path)

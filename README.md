@@ -23,10 +23,10 @@ Frontend (Next.js)  -->  Django API (ECS)  -->  Celery Workers (ECS)
 
 | Mode | Output | Description |
 |------|--------|-------------|
-| Default (`llms.txt`) | AI-enhanced index with titles + descriptions | Curated site overview -- max 5 entries per section. 15-45s. |
-| Detailed (`llms-full.txt`) | Full page content inlined | Comprehensive content dump for deep LLM context. 30s-2min. |
+| Default (`llms.txt`) | AI-enhanced index with titles + descriptions | Curated site overview -- max 5 entries per section, polished for consistency. 15-45s. |
+| Detailed (`llms-full.txt`) | LLM-cleaned page content inlined | Clean, informational content per page with marketing noise stripped. 30s-2min. |
 
-Both modes use GPT-4o-mini for description enhancement, site summaries, and a final polish pass. Playwright is used as a fallback only when CSR or bot-blocking (403) is detected.
+Both modes use GPT-4.1-nano for description enhancement and site summaries. Default mode adds a final polish pass. Detailed mode adds per-page LLM content cleaning (strips CTAs, logo grids, testimonials) to produce clean markdown. Playwright is used as a fallback only when CSR or bot-blocking (403) is detected.
 
 ## Project Structure
 
@@ -194,7 +194,7 @@ See [`docs/api/`](docs/api/) for the full API reference, authentication guide, a
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS v4, Zod, Axios |
 | Backend | Django 5.1, DRF, Celery 5.4, Pydantic 2 |
 | Crawler | httpx, BeautifulSoup4, Playwright |
-| AI | OpenAI GPT-4o-mini, Langfuse |
+| AI | OpenAI GPT-4.1-nano, Langfuse |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Cache/Queue | Upstash Redis |
 | Infrastructure | AWS ECS Fargate, ALB, Terraform |

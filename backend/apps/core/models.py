@@ -54,7 +54,7 @@ class BrowserConfig(BaseModel):
 
 
 class AIConfig(BaseModel):
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-nano"
     max_content_chars: int = 3000
     temperature: float = 0.3
     max_tokens: int = 150
@@ -87,7 +87,6 @@ class RobotsResult(BaseModel):
 
 class SitemapEntry(BaseModel):
     url: str
-    lastmod: datetime | None = None
     priority: float | None = None
 
 
@@ -129,14 +128,7 @@ class EnhancedPage(BaseModel):
     url: str
     title: str
     description: str
-    section_hint: str | None = None
-
-
-class EnhancedPageDescription(BaseModel):
-    """Raw LLM output for a single page."""
-
-    title: str
-    description: str
+    content_text: str | None = None
 
 
 class RenderedPage(BaseModel):

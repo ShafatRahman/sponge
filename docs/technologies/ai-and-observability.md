@@ -2,12 +2,16 @@
 
 ## AI / LLM
 
-### OpenAI API (GPT-4o-mini)
+### OpenAI API (GPT-4.1-nano)
 
 - **What**: Large Language Model API.
-- **Why**: Generates high-quality page descriptions from extracted content. GPT-4o-mini balances quality and cost.
-- **Our usage**: `LLMClient` in `apps/ai/llm_client.py`. Used only in Detailed mode for `DescriptionEnhancer`.
-- **Cost estimate**: ~$0.15/1M input tokens, ~$0.60/1M output tokens. Roughly $0.0003 per page.
+- **Why**: Generates high-quality page descriptions from extracted content. GPT-4.1-nano is the fastest and cheapest non-reasoning model, outperforming GPT-4o-mini on benchmarks.
+- **Our usage**: `LLMClient` in `apps/ai/llm_client.py`. Four LLM tasks:
+  1. **Description enhancement** (both modes): batch-by-section titles and descriptions
+  2. **Site summary** (both modes): blockquote + key notes from homepage
+  3. **Content cleaning** (Detailed only): per-page removal of marketing noise (CTAs, logos, testimonials) to produce clean informational markdown for `llms-full.txt`
+  4. **Polish pass** (Default only): final consistency refinement of `llms.txt`
+- **Cost estimate**: ~$0.15/1M input tokens, ~$0.60/1M output tokens. Default mode: ~$0.001/job. Detailed mode: ~$0.005/job (additional per-page content cleaning).
 - **Docs**: https://platform.openai.com/docs/api-reference
 
 ### Langfuse

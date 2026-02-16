@@ -29,6 +29,10 @@ export default withSentryConfig(nextConfig, {
   },
   // Disable Sentry telemetry
   telemetry: false,
-  // Disable Spotlight (local dev overlay)
-  disableLogger: true,
+  // Remove Sentry debug logging from bundle
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });

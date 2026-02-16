@@ -12,7 +12,7 @@ Copy from `backend/.env.example`:
 | `REDIS_URL` | Yes | Redis connection string (e.g. `redis://localhost:6379/0`). Celery broker and progress pub/sub. |
 | `SUPABASE_URL` | Yes | Supabase project URL (e.g. `https://xxxx.supabase.co`). |
 | `SUPABASE_SECRET_KEY` | Yes | Supabase secret key (`sb_secret_...`) for server-side access (storage uploads, admin operations). |
-| `OPENAI_API_KEY` | Yes | GPT-4o-mini powers description enhancement, site summaries, and polish passes in **both** Default and Detailed modes. Task fails fast with a clear error if missing. |
+| `OPENAI_API_KEY` | Yes | GPT-4.1-nano powers description enhancement, site summaries, and polish passes in **both** Default and Detailed modes. Task fails fast with a clear error if missing. |
 | `LANGFUSE_PUBLIC_KEY` | No | Langfuse observability. Optional but recommended. |
 | `LANGFUSE_SECRET_KEY` | No | Langfuse secret key. |
 | `LANGFUSE_HOST` | No | Defaults to `https://cloud.langfuse.com` (EU). Set to `https://us.cloud.langfuse.com` for US region. |

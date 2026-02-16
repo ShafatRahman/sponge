@@ -24,6 +24,7 @@ from apps.core.cache import CacheService
 from apps.core.http_client import HttpClient
 from apps.core.models import (
     DiscoveredPage,
+    EnhancedPage,
     ExtractedPage,
     GenerationConfig,
     JobMode,
@@ -337,6 +338,29 @@ async def _run_pipeline(
             sections_extracted, job_id, on_progress=on_enhance_progress
         )
 
+        # Phase 4b (Detailed only): LLM content cleaning per page
+        cleaned_content: dict[str, str] = {}
+        if config.mode == JobMode.DETAILED:
+            task.publish_progress(
+                job_id,
+                JobStatus.ENHANCING,
+                "Cleaning page content...",
+            )
+
+            async def on_clean_progress(completed: int, total: int, current_url: str) -> None:
+                task.publish_progress(
+                    job_id,
+                    JobStatus.ENHANCING,
+                    f"Cleaning content ({completed}/{total})",
+                    completed=completed,
+                    total=total,
+                    current_url=current_url,
+                )
+
+            cleaned_content = await enhancer.clean_page_contents(
+                pages_with_content, job_id, on_progress=on_clean_progress
+            )
+
         # Generate LLM-powered site summary from homepage content
         site_info = await asyncio.to_thread(
             _build_site_info, url, extracted_pages, llm_client, job_id
@@ -353,34 +377,53 @@ async def _run_pipeline(
         builder = LlmsTxtBuilder()
 
         if config.mode == JobMode.DETAILED:
-            # Detailed mode: build llms-full.txt (full page content) as the main output
-            sections_raw = categorizer.categorize(pages_with_content)
-            llms_txt = builder.build_full(site_info, sections_raw)
-            structured_sections = {name: [] for name in sections_raw}
+            # Merge enhanced titles/descriptions with cleaned content
+            detailed_sections: dict[str, list[EnhancedPage]] = {}
+            for section_name, enhanced_pages in enhanced_sections.items():
+                detailed_pages: list[EnhancedPage] = []
+                for ep in enhanced_pages:
+                    detailed_pages.append(
+                        EnhancedPage(
+                            url=ep.url,
+                            title=ep.title,
+                            description=ep.description,
+                            content_text=cleaned_content.get(ep.url),
+                        )
+                    )
+                detailed_sections[section_name] = detailed_pages
+
+            llms_txt = builder.build_full(site_info, detailed_sections)
+            _, structured_sections = builder.build_index(
+                site_info, enhanced_sections, max_per_section=None
+            )
         else:
             # Default mode: build curated index (max 5 entries/section)
             llms_txt, structured_sections = builder.build_index(
                 site_info, enhanced_sections, max_per_section=5
             )
 
-        # Phase 6: Polish pass (both modes)
-        task.publish_progress(
-            job_id,
-            JobStatus.GENERATING,
-            "Polishing final output...",
-        )
+        # Phase 6: Polish pass (Default mode only -- full text is too long to polish)
+        if config.mode != JobMode.DETAILED:
+            task.publish_progress(
+                job_id,
+                JobStatus.GENERATING,
+                "Polishing final output...",
+            )
 
-        try:
-            llms_txt = await asyncio.to_thread(llm_client.polish_llms_txt, llms_txt, job_id)
-        except Exception:
-            logger.warning("LLM polish pass failed, using unpolished output", exc_info=True)
+            try:
+                llms_txt = await asyncio.to_thread(llm_client.polish_llms_txt, llms_txt, job_id)
+            except Exception:
+                logger.warning("LLM polish pass failed, using unpolished output", exc_info=True)
 
         successful = pages_with_content
         failed = [p for p in extracted_pages if p.error]
 
-        # LLM calls: 1 per section (batch) + 1 site summary + 1 polish
+        # LLM calls: 1 per section (descriptions) + 1 site summary
+        #   + N content cleans (Detailed) or 1 polish (Default)
         section_count = len([s for s in sections_extracted.values() if s])
-        llm_calls = section_count + 2
+        content_clean_calls = len(cleaned_content) if config.mode == JobMode.DETAILED else 0
+        polish_calls = 0 if config.mode == JobMode.DETAILED else 1
+        llm_calls = section_count + 1 + content_clean_calls + polish_calls
         estimated_cost = llm_calls * 0.0005
 
         return LlmsTxtResult(

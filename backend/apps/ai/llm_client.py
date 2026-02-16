@@ -9,45 +9,12 @@ from typing import TYPE_CHECKING
 from langfuse import Langfuse
 from langfuse.openai import OpenAI as LangfuseOpenAI
 
-from apps.core.models import EnhancedPage, EnhancedPageDescription, SiteInfo
+from apps.core.models import EnhancedPage, SiteInfo
 
 if TYPE_CHECKING:
     from apps.core.models import AIConfig, ExtractedPage
 
 logger = logging.getLogger(__name__)
-
-FALLBACK_SYSTEM_PROMPT = (
-    "You write concise titles and descriptions for web pages in an llms.txt file "
-    "(see llmstxt.org). The output helps LLMs quickly understand what each page "
-    "contains. Respond in JSON format only.\n\n"
-    "Rules:\n"
-    "- Title: 2-5 word noun phrase. Specific to the page content, not generic.\n"
-    "- Description: 8-15 words. State what the page contains or explains, "
-    "not what the reader should do.\n"
-    "- NEVER start with filler verbs like 'Explore', 'Discover', 'Learn about', "
-    "'Find out', 'Check out', 'Dive into', 'Uncover'. Start with the subject.\n"
-    "- Be factual and specific. Mention product names, technologies, or topics.\n"
-    "- Vary your sentence structure across pages."
-)
-
-FALLBACK_USER_PROMPT_TEMPLATE = (
-    "Generate a title and description for this web page.\n\n"
-    "URL: {url}\n\n"
-    "Page content:\n{content}\n\n"
-    "Good examples:\n"
-    '- {{"title": "Python SDK Reference", '
-    '"description": "Complete API reference for the Python client library."}}\n'
-    '- {{"title": "Pricing Plans", '
-    '"description": "Three tiers from free to enterprise with usage-based billing."}}\n'
-    '- {{"title": "HTMX Integration Guide", '
-    '"description": "Step-by-step setup for adding HTMX to a FastHTML project."}}\n\n'
-    "Bad examples (do NOT produce these):\n"
-    '- {{"title": "Explore Our Platform", '
-    '"description": "Discover how our platform can help you."}}\n'
-    '- {{"title": "Learn More", '
-    '"description": "Explore the latest insights from our team."}}\n\n'
-    'Respond with:\n{{"title": "...", "description": "..."}}'
-)
 
 
 SITE_SUMMARY_SYSTEM_PROMPT = (
@@ -106,6 +73,39 @@ BATCH_SECTION_USER_TEMPLATE = (
     "Respond with:\n"
     '{{"pages": [{{"url": "...", "title": "...", "description": "..."}}, ...]}}'
 )
+
+CONTENT_CLEAN_SYSTEM_PROMPT = (
+    "You clean web page content for an llms-full.txt file (see llmstxt.org). "
+    "You will receive raw extracted content from a web page. Return clean, "
+    "well-structured markdown that preserves only the substantive, "
+    "informational content.\n\n"
+    "Remove:\n"
+    "- Calls-to-action (Get a Demo, Sign Up, Contact Sales, etc.)\n"
+    "- Company logo lists and social proof sections\n"
+    "- Testimonials and customer quotes\n"
+    "- Navigation links and internal link lists\n"
+    "- Repetitive marketing phrases and filler text\n"
+    "- Empty or meaningless sections\n\n"
+    "Keep:\n"
+    "- Feature descriptions and how-it-works explanations\n"
+    "- Technical information and specifications\n"
+    "- Pricing details and plan comparisons\n"
+    "- FAQ answers (substantive content, not generic marketing)\n"
+    "- Blog article content\n"
+    "- Data, statistics, and factual claims\n\n"
+    "Use clean markdown with headings (## and ###). "
+    "Write concisely. Target 200-600 words. "
+    "Return only the cleaned content. No JSON wrapper, no code fences."
+)
+
+CONTENT_CLEAN_USER_TEMPLATE = (
+    "Clean the content from this web page:\n\n"
+    "Title: {title}\n"
+    "URL: {url}\n\n"
+    "Raw content:\n{content}\n\n"
+    "Return clean, informational markdown only."
+)
+
 
 POLISH_SYSTEM_PROMPT = (
     "You are an editor for llms.txt files (see llmstxt.org). You will receive a "
@@ -283,6 +283,54 @@ class LLMClient:
 
         return enhanced
 
+    def clean_page_content(
+        self,
+        url: str,
+        title: str,
+        raw_content: str,
+        trace_id: str,
+    ) -> str:
+        """Clean raw page content for llms-full.txt, removing marketing noise.
+
+        Returns clean, informational markdown suitable for inline display
+        in the llms-full.txt file.
+        """
+        truncated = raw_content[: self._config.max_content_chars * 2]
+
+        try:
+            prompt = self._langfuse.get_prompt("content_cleaner")
+            messages = prompt.compile(url=url, title=title, content=truncated)
+        except Exception:
+            logger.debug("Langfuse content_cleaner prompt unavailable, using fallback")
+            messages = [
+                {"role": "system", "content": CONTENT_CLEAN_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": CONTENT_CLEAN_USER_TEMPLATE.format(
+                        url=url, title=title, content=truncated
+                    ),
+                },
+            ]
+
+        response = self._openai.chat.completions.create(
+            model=self._config.model,
+            messages=messages,
+            temperature=self._config.temperature,
+            max_tokens=1024,
+            trace_id=trace_id,
+            metadata={"url": url, "task": "content_clean"},
+        )
+
+        result = response.choices[0].message.content or raw_content
+        result = result.strip()
+        if result.startswith("```"):
+            lines = result.split("\n")
+            lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            result = "\n".join(lines)
+        return result.strip()
+
     def polish_llms_txt(self, llms_txt: str, trace_id: str) -> str:
         """Polish a complete llms.txt file for consistency and quality.
 
@@ -321,55 +369,6 @@ class LLMClient:
             result = "\n".join(lines)
 
         return result.strip() + "\n"
-
-    def generate_description(
-        self,
-        url: str,
-        content: str,
-        trace_id: str,
-    ) -> EnhancedPageDescription:
-        """Generate a title and description for a single page.
-
-        Uses Langfuse prompt management if available, falls back to hardcoded prompt.
-        """
-        messages = self._build_messages(url, content)
-
-        response = self._openai.chat.completions.create(
-            model=self._config.model,
-            messages=messages,
-            response_format={"type": "json_object"},
-            temperature=self._config.temperature,
-            max_tokens=self._config.max_tokens,
-            trace_id=trace_id,
-            metadata={"url": url},
-        )
-
-        result_text = response.choices[0].message.content or "{}"
-        result = json.loads(result_text)
-
-        return EnhancedPageDescription(
-            title=result.get("title", "Untitled"),
-            description=result.get("description", ""),
-        )
-
-    def _build_messages(self, url: str, content: str) -> list[dict[str, str]]:
-        """Build chat messages, preferring Langfuse-managed prompts."""
-        truncated_content = content[: self._config.max_content_chars]
-
-        try:
-            prompt = self._langfuse.get_prompt("page_description_enhancer")
-            return prompt.compile(url=url, content=truncated_content)
-        except Exception:
-            logger.debug("Langfuse prompt unavailable, using fallback")
-            return [
-                {"role": "system", "content": FALLBACK_SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": FALLBACK_USER_PROMPT_TEMPLATE.format(
-                        url=url, content=truncated_content
-                    ),
-                },
-            ]
 
     def flush(self) -> None:
         """Flush Langfuse traces."""

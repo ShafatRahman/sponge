@@ -23,6 +23,7 @@ class DescriptionEnhancer:
 
     Features:
     - Section-aware batch processing (one LLM call per section)
+    - Per-page content cleaning for Detailed mode
     - Graceful degradation: falls back to raw meta tags on LLM failure
     - Progress tracking via callback
     """
@@ -92,61 +93,56 @@ class DescriptionEnhancer:
 
         return dict(results)
 
-    async def enhance_batch(
+    async def clean_page_contents(
         self,
         pages: list[ExtractedPage],
         job_id: str,
         on_progress: ProgressCallback | None = None,
-    ) -> list[EnhancedPage]:
-        """Enhance descriptions for a batch of pages with concurrency control.
+        concurrency: int = 5,
+    ) -> dict[str, str]:
+        """Clean raw page content using LLM for Detailed mode.
+
+        Each page's raw ``content_text`` is sent through an LLM to strip
+        marketing noise, CTAs, logo grids, and testimonials, keeping only
+        substantive informational content.
 
         Args:
-            pages: Pages to enhance.
+            pages: Extracted pages with content_text populated.
             job_id: Job ID for Langfuse tracing.
             on_progress: Optional callback(completed, total, url).
+            concurrency: Max parallel LLM calls.
 
         Returns:
-            List of EnhancedPage with LLM-generated or fallback descriptions.
+            Mapping of URL -> cleaned content markdown.
         """
-        semaphore = asyncio.Semaphore(self._config.max_concurrent_llm_calls)
+        pages_with_content = [p for p in pages if p.content_text]
+        sem = asyncio.Semaphore(concurrency)
         completed = 0
-        total = len(pages)
+        total = len(pages_with_content)
 
-        async def enhance_one(page: ExtractedPage) -> EnhancedPage:
+        async def clean_one(page: ExtractedPage) -> tuple[str, str]:
             nonlocal completed
-            async with semaphore:
-                result = await self._enhance_single(page, job_id)
+            async with sem:
+                try:
+                    cleaned = await asyncio.to_thread(
+                        self._llm_client.clean_page_content,
+                        url=page.url,
+                        title=page.title or page.og_title or "Untitled",
+                        raw_content=page.content_text or "",
+                        trace_id=job_id,
+                    )
+                except Exception as exc:
+                    logger.warning("Content clean failed for %s: %s", page.url, exc)
+                    cleaned = page.content_text or ""
+
                 completed += 1
                 if on_progress:
                     await on_progress(completed, total, page.url)
-                return result
 
-        results = await asyncio.gather(*[enhance_one(p) for p in pages])
+                return page.url, cleaned
+
+        tasks = [clean_one(p) for p in pages_with_content]
+        task_results = await asyncio.gather(*tasks)
         self._llm_client.flush()
-        return list(results)
 
-    async def _enhance_single(
-        self,
-        page: ExtractedPage,
-        job_id: str,
-    ) -> EnhancedPage:
-        """Enhance a single page, with fallback on error."""
-        try:
-            desc = await asyncio.to_thread(
-                self._llm_client.generate_description,
-                url=page.url,
-                content=page.content_text or "",
-                trace_id=job_id,
-            )
-            return EnhancedPage(
-                url=page.url,
-                title=desc.title,
-                description=desc.description,
-            )
-        except Exception as exc:
-            logger.warning("LLM enhancement failed for %s: %s", page.url, exc)
-            return EnhancedPage(
-                url=page.url,
-                title=page.title or page.og_title or "Untitled",
-                description=page.description or page.og_description or "",
-            )
+        return dict(task_results)
