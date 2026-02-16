@@ -1,0 +1,26 @@
+# Development overrides -- automatically merged with docker-compose.yml.
+# Mounts local code into containers so changes take effect on restart
+# without rebuilding the Docker image.
+#
+# To use: copy this file to docker-compose.override.yml
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+# Then run: docker-compose up -d
+
+services:
+  api:
+    volumes:
+      - ./backend:/app
+      - /app/.venv   # Isolate container's .venv from host's
+    command: >
+      uv run gunicorn config.asgi:application
+      --bind 0.0.0.0:8000
+      --worker-class uvicorn.workers.UvicornWorker
+      --workers 1
+      --timeout 120
+      --reload          # Auto-restart on code changes
+      --access-logfile -
+
+  worker:
+    volumes:
+      - ./backend:/app
+      - /app/.venv
