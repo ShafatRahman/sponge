@@ -4,6 +4,28 @@ Sponge is a web application that automatically generates spec-compliant [llms.tx
 
 **Live at [spotidex.xyz](https://spotidex.xyz)**
 
+## Demo
+
+**Enter any URL and choose your output mode.**
+
+![Homepage](docs/assets/homepage.png)
+
+**Optional sign-in to save your generation history.**
+
+![Sign in](docs/assets/sign-in.png)
+
+**Real-time progress tracking as the pipeline runs.**
+
+![Generation progress](docs/assets/generation.png)
+
+**View, copy, or download the generated llms.txt.**
+
+![Result](docs/assets/result.png)
+
+**Validation and errors surface as toasts.**
+
+![Error toast](docs/assets/error-toast.png)
+
 ## Architecture
 
 ```
