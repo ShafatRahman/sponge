@@ -1,0 +1,24 @@
+target-version = "py311"
+line-length = 100
+extend-exclude = ["apps/jobs/migrations"]
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort (import ordering)
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "RUF", # ruff-specific rules
+]
+
+[lint.isort]
+known-first-party = ["apps", "config"]
+
+[format]
+quote-style = "double"
