@@ -71,7 +71,7 @@ export function useJobStream(jobId: string): UseJobStreamReturn {
   );
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
     const url = `${apiUrl}/api/jobs/${jobId}/stream/`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
