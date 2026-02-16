@@ -1,10 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { AuthService } from "@/lib/api/auth-service";
 
 export function Header() {
+  const router = useRouter();
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    const auth = new AuthService();
+
+    auth.getSession().then((session) => {
+      setIsSignedIn(!!session);
+    });
+
+    const subscription = auth.onAuthStateChange((session) => {
+      setIsSignedIn(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleSignOut() {
+    const auth = new AuthService();
+    await auth.signOut();
+    router.push("/");
+  }
+
   return (
     <header className="border-border/50 bg-background/80 sticky top-0 z-50 border-b backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
@@ -35,9 +63,15 @@ export function Header() {
           >
             GitHub
           </Link>
-          <Button size="sm" asChild>
-            <Link href="/auth/login">Sign in</Link>
-          </Button>
+          {isSignedIn ? (
+            <Button size="sm" variant="outline" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          ) : (
+            <Button size="sm" asChild>
+              <Link href="/auth/login">Sign in</Link>
+            </Button>
+          )}
         </nav>
       </div>
     </header>

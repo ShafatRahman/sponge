@@ -7,7 +7,6 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { AuthService } from "@/lib/api/auth-service";
 
 export default function LoginPage() {
@@ -37,11 +36,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleOAuth(provider: "google" | "github") {
-    const auth = new AuthService();
-    await auth.signInWithOAuth(provider);
-  }
-
   return (
     <>
       <Header />
@@ -56,21 +50,6 @@ export default function LoginPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Button variant="outline" onClick={() => handleOAuth("github")} className="w-full">
-                Continue with GitHub
-              </Button>
-              <Button variant="outline" onClick={() => handleOAuth("google")} className="w-full">
-                Continue with Google
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-muted-foreground text-xs">or</span>
-              <Separator className="flex-1" />
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-3">
               <Input
                 type="email"

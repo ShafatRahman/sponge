@@ -21,7 +21,7 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
             : "text-muted-foreground hover:text-foreground"
         } disabled:opacity-50`}
       >
-        Standard
+        llms.txt
       </button>
       <button
         type="button"
@@ -33,11 +33,8 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
             : "text-muted-foreground hover:text-foreground"
         } disabled:opacity-50`}
       >
-        Detailed
+        llms-full.txt
       </button>
-      <span className="text-muted-foreground text-xs">
-        {mode === "default" ? "AI-enhanced index of your site" : "Full content + AI descriptions"}
-      </span>
     </div>
   );
 }
