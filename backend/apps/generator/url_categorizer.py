@@ -176,10 +176,7 @@ class URLCategorizer:
         """Check if a URL should be excluded from the output entirely."""
         parsed = urlparse(url)
         path = parsed.path.lower()
-        for pattern in self._exclude_compiled:
-            if pattern.search(path):
-                return True
-        return False
+        return any(pattern.search(path) for pattern in self._exclude_compiled)
 
     def _consolidate_small_sections(
         self, sections: dict[str, list[ExtractedPage]]

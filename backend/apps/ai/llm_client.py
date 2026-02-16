@@ -35,12 +35,17 @@ FALLBACK_USER_PROMPT_TEMPLATE = (
     "URL: {url}\n\n"
     "Page content:\n{content}\n\n"
     "Good examples:\n"
-    '- {{"title": "Python SDK Reference", "description": "Complete API reference for the Python client library, including authentication and error handling."}}\n'
-    '- {{"title": "Pricing Plans", "description": "Three tiers from free to enterprise with usage-based billing for API calls."}}\n'
-    '- {{"title": "HTMX Integration Guide", "description": "Step-by-step setup for adding HTMX to a FastHTML project with examples."}}\n\n'
+    "- {{\"title\": \"Python SDK Reference\", "
+    "\"description\": \"Complete API reference for the Python client library.\"}}\n"
+    "- {{\"title\": \"Pricing Plans\", "
+    "\"description\": \"Three tiers from free to enterprise with usage-based billing.\"}}\n"
+    "- {{\"title\": \"HTMX Integration Guide\", "
+    "\"description\": \"Step-by-step setup for adding HTMX to a FastHTML project.\"}}\n\n"
     "Bad examples (do NOT produce these):\n"
-    '- {{"title": "Explore Our Platform", "description": "Discover how our platform can help you achieve your goals."}}\n'
-    '- {{"title": "Learn More", "description": "Explore the latest insights and updates from our team."}}\n\n'
+    "- {{\"title\": \"Explore Our Platform\", "
+    "\"description\": \"Discover how our platform can help you.\"}}\n"
+    "- {{\"title\": \"Learn More\", "
+    "\"description\": \"Explore the latest insights from our team.\"}}\n\n"
     'Respond with:\n{{"title": "...", "description": "..."}}'
 )
 

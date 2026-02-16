@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import redis as redis_lib
 from django.conf import settings
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from rest_framework.request import Request
 
-from apps.core.models import JobMode, JobStatus, RateLimitConfig
+from apps.core.models import JobStatus, RateLimitConfig
 from apps.core.rate_limiter import RateLimiter
 from apps.core.supabase_client import SupabaseService
 from apps.jobs.models import Job
@@ -241,7 +241,7 @@ class JobStreamView(APIView):
     # JSONRenderer. Add a renderer so DRF's content negotiation passes.
     # The renderer is never actually used -- this view returns
     # StreamingHttpResponse directly, bypassing DRF's rendering pipeline.
-    renderer_classes = [JSONRenderer, _EventStreamRenderer]
+    renderer_classes: ClassVar[list[type[BaseRenderer]]] = [JSONRenderer, _EventStreamRenderer]
 
     def get(self, request: Request, job_id: str) -> StreamingHttpResponse:
         try:
@@ -366,7 +366,9 @@ async def _stream_events(job_id: str, initial_status: str) -> AsyncGenerator[str
 
             # Hard timeout: close the stream after SSE_STREAM_TIMEOUT_SECONDS
             if now - start_time >= SSE_STREAM_TIMEOUT_SECONDS:
-                logger.warning("SSE stream timed out for job %s after %ds", job_id, SSE_STREAM_TIMEOUT_SECONDS)
+                logger.warning(
+                    "SSE stream timed out for job %s after %ds", job_id, SSE_STREAM_TIMEOUT_SECONDS
+                )
                 # Mark the job as failed if it is still running
                 await sync_to_async(
                     Job.objects.filter(id=job_id)

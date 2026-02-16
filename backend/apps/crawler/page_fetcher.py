@@ -8,11 +8,11 @@ from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 
 from apps.core.models import BrowserConfig, DiscoveredPage, ExtractedPage
-from apps.extractor.content_extractor import ContentExtractor
-from apps.extractor.meta_extractor import MetaExtractor
 
 if TYPE_CHECKING:
     from apps.core.http_client import HttpClient
+    from apps.extractor.content_extractor import ContentExtractor
+    from apps.extractor.meta_extractor import MetaExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +38,7 @@ _SOFT_404_SIGNALS = [
 def _is_soft_404(page: ExtractedPage) -> bool:
     """Detect pages that returned 200 but are actually error/not-found pages."""
     title = (page.title or "").lower().strip()
-    for signal in _SOFT_404_SIGNALS:
-        if signal in title:
-            return True
-    return False
+    return any(signal in title for signal in _SOFT_404_SIGNALS)
 
 
 class SmartPageFetcher:
@@ -125,10 +122,12 @@ class SmartPageFetcher:
         )
 
         csr_pages = [pages[i] for i in csr_indices]
-        rendered_results = await self._playwright_fetch_batch(csr_pages, on_progress, completed, total)
+        rendered_results = await self._playwright_fetch_batch(
+            csr_pages, on_progress, completed, total
+        )
 
         # Step 5: Merge results
-        for idx, rendered in zip(csr_indices, rendered_results):
+        for idx, rendered in zip(csr_indices, rendered_results, strict=False):
             if not rendered.error:
                 results[idx] = rendered
 
@@ -202,7 +201,9 @@ class SmartPageFetcher:
                     rendered = await browser_provider.get_page_content(page.url)
 
                     if rendered.error:
-                        logger.warning("Playwright render failed for %s: %s", page.url, rendered.error)
+                        logger.warning(
+                            "Playwright render failed for %s: %s", page.url, rendered.error
+                        )
                         return ExtractedPage(
                             url=page.url,
                             error=rendered.error,

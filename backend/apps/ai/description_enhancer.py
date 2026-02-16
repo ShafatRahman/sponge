@@ -53,7 +53,6 @@ class DescriptionEnhancer:
         """
         completed = 0
         total = sum(len(pages) for pages in sections.values())
-        total_sections = len(sections)
 
         async def enhance_section(
             section_name: str, pages: list[ExtractedPage]
